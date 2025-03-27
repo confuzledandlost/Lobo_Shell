@@ -15,7 +15,7 @@ lobo_shell.x: main.o parsetools.o
 	$(CC) -g -o $@ $^
 
 # $< is the first item after the colon (main.c here)
-main.o: main.c include/parsetools.h include/constants.h
+main.o: main.c include/parsetools.h include/constants.h include/tokenizer.h
 	$(CC) $(CFLAGS) -g -c -o $@ $<
 
 parsetools.o: src/parsetools.c include/constants.h

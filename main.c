@@ -8,10 +8,10 @@
 #include <fcntl.h>
 #include "constants.h"
 #include "parsetools.h"
+#include "tokenizer.h"
 
 int main() {
-   
-
+   TokenizeTokens();
     return 0;
 }
 
