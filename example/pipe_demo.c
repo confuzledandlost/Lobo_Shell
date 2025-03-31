@@ -35,11 +35,12 @@ int main(void)
     }
 
     switch ( pid = fork() ) {
-        printf("Inside the second fork()\n");
+
         case -1: 
             syserror( "Second fork failed" );
             break;
-        case  0: 
+        case  0:
+            printf("Inside the second fork()\n");
             if (close(1) == -1)
                 syserror("Could not close stdout");
             dup(pfd[1]);
