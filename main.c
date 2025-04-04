@@ -72,6 +72,7 @@ void execute_command(int word_count, char** words) {
 }
 
 int main() {
+    /*
     char input_line[MAX_LINE_CHARS];
     char* words[MAX_LINE_WORDS];
     int word_count;
@@ -95,6 +96,9 @@ int main() {
         // Execute the command
         execute_command(word_count, words);
     }
+    */
+
+   TokenizeTokens();
 
     return 0;
 }
