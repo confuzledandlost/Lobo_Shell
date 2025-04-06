@@ -6,99 +6,137 @@
 #include <errno.h>
 #include <string.h>
 #include <fcntl.h>
-#include "constants.h"
-#include "parsetools.h"
-#include "tokenizer.h"
+#include "include/constants.h"
+#include "include/parsetools.h"
+#include "include/tokenizer.h"
+#include "include/command.h"
 
-void execute_command(int word_count, char** words) {
-    if(word_count <= 0) {
-        return; //no argument to execute
+// Function to execute a pipeline of commands
+void execute_pipeline(struct Command* head) {
+    if (head == NULL) {
+        return;
     }
-    /*
-     Purpose of below code: split the words array into null terminated commands
-     Ex: input is ls -l | grep foo | wc -l
-     words[0] = "ls"
-     words[1] = "-l"
-     words[2] = "|"
-     words[3] = "grep"
-     words[4] = "foo"
-     words[5] = "|"
-     words[6] = "wc"
-     words[7] = "-l"
 
-     commands[0][0] = "ls"
-     commands[0][1] = "-l"
-     commands[0][2] = NULL
+    int pipefd[2];
+    int prev_pipe_read = -1;
+    struct Command* current = head;
 
-     commands[1][0] = "grep"
-     commands[1][1] = "foo"
-     commands[1][2] = NULL
-
-     commands[2][0] = "wc"
-     commands[2][1] = "-l"
-     commands[2][2] = NULL
-
-     This allows us to use execvp, which requires a null terminated array
-    */
-    // First, find pipe locations and split the words array
-    char** commands[MAX_PIPES + 1]; // Array of command arrays
-    int cmd_count = 0;              // Number of commands
-    int start_index = 0;            // Start index of current command
-
-// Allocate memory for first command
-    commands[cmd_count] = malloc(sizeof(char*) * MAX_LINE_WORDS);
-    int cmd_arg_count = 0;
-
-// Iterate through words
-    for (int i = 0; i < word_count; i++) {
-        if (strcmp(words[i], "|") == 0) {
-            // End current command with NULL
-            commands[cmd_count][cmd_arg_count] = NULL;
-            cmd_count++;
-
-            // Start new command
-            commands[cmd_count] = malloc(sizeof(char*) * MAX_LINE_WORDS);
-            cmd_arg_count = 0;
-        } else {
-            // Add word to current command
-            commands[cmd_count][cmd_arg_count++] = words[i];
+    while (current != NULL) {
+        // Create pipe if there's another command after this one
+        if (current->next != NULL) {
+            if (pipe(pipefd) < 0) {
+                perror("pipe");
+                return;
+            }
         }
+
+        pid_t pid = fork();
+        if (pid < 0) {
+            perror("fork");
+            return;
+        } else if (pid == 0) { // Child process
+            // Handle input redirection or pipe from previous command
+            if (current->input_file != NULL) {
+                int fd = open(current->input_file, O_RDONLY);
+                if (fd < 0) {
+                    perror("open input file");
+                    exit(EXIT_FAILURE);
+                }
+                if (dup2(fd, STDIN_FILENO) < 0) {
+                    perror("dup2 input");
+                    exit(EXIT_FAILURE);
+                }
+                close(fd);
+            } else if (prev_pipe_read != -1) {
+                if (dup2(prev_pipe_read, STDIN_FILENO) < 0) {
+                    perror("dup2 pipe input");
+                    exit(EXIT_FAILURE);
+                }
+                close(prev_pipe_read);
+            }
+
+            // Handle output redirection or pipe to next command
+            if (current->output_file != NULL) {
+                int flags = O_WRONLY | O_CREAT;
+                if (current->append) {
+                    flags |= O_APPEND;
+                } else {
+                    flags |= O_TRUNC;
+                }
+                int fd = open(current->output_file, flags, 0644);
+                if (fd < 0) {
+                    perror("open output file");
+                    exit(EXIT_FAILURE);
+                }
+                if (dup2(fd, STDOUT_FILENO) < 0) {
+                    perror("dup2 output");
+                    exit(EXIT_FAILURE);
+                }
+                close(fd);
+            } else if (current->next != NULL) {
+                if (dup2(pipefd[1], STDOUT_FILENO) < 0) {
+                    perror("dup2 pipe output");
+                    exit(EXIT_FAILURE);
+                }
+                close(pipefd[1]);
+            }
+
+            // Close unused pipe ends
+            if (prev_pipe_read != -1) {
+                close(prev_pipe_read);
+            }
+            if (current->next != NULL) {
+                close(pipefd[0]);
+            }
+
+            // Execute the command
+            if (execvp(current->argv[0], current->argv) < 0) {
+                perror("execvp");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        // Parent process
+        if (prev_pipe_read != -1) {
+            close(prev_pipe_read);
+        }
+        if (current->next != NULL) {
+            close(pipefd[1]);
+            prev_pipe_read = pipefd[0];
+        }
+
+        current = current->next;
     }
 
-    // NULL-terminate the last command
-    commands[cmd_count][cmd_arg_count] = NULL;
-    cmd_count++; // Total number of commands
-
+    // Wait for all child processes
+    while (wait(NULL) > 0);
 }
 
 int main() {
-    /*
-    char input_line[MAX_LINE_CHARS];
-    char* words[MAX_LINE_WORDS];
-    int word_count;
-
+    int tokenCount;
+    
     while (1) {
         // Display prompt
         printf("> ");
 
-        // Get input
-        if (fgets(input_line, MAX_LINE_CHARS, stdin) == NULL) {
+        // Get tokens from input
+        struct Token* tokens = TokenizeTokens(&tokenCount);
+        if (tokens == NULL) {
             break; // Exit on EOF
         }
 
-        // Split the input line into words
-        word_count = split_cmd_line(input_line, words);
-
-        if (word_count < MAX_LINE_WORDS) {
-            words[word_count] = NULL;
+        // Convert tokens to pipeline of commands
+        struct Command* pipeline = TokensToPipeline(tokens, tokenCount);
+        
+        // Execute the pipeline if valid
+        if (pipeline != NULL) {
+            execute_pipeline(pipeline);
+            FreePipeline(pipeline);
         }
 
-        // Execute the command
-        execute_command(word_count, words);
+        // Clean up tokens
+        FreeTokens(tokens, tokenCount);
     }
-    */
-
-   TokenizeTokens();
 
     return 0;
 }
