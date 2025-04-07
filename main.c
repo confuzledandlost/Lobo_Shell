@@ -118,7 +118,7 @@ int main() {
     while (1) {
         // Get tokens from input
         struct Token* tokens = TokenizeTokens(&tokenCount);
-        if (tokens == NULL) {
+        if (tokens->s == End_Of_File) {
             break; // Exit on EOF
         }
 

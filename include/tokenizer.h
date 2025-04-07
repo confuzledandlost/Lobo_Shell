@@ -17,7 +17,8 @@ enum state{
     right_redirection,
     append_redirection,
     string,
-    pipe_state
+    pipe_state,
+    End_Of_File
 };
 
 struct Token{
@@ -133,7 +134,14 @@ struct Token* TokenizeTokens(int* tokenCount) {
     int tokenIndex = 0; // index of current token
     int currentWordIndex = 0;
 
-    while((d = getchar()) != EOF) { // while not end of file
+    while(d = getchar()) { // while not end of file
+        if(d == EOF) {
+            tokens[tokenIndex].word = strdup(currentWord);
+            tokens[tokenIndex].s = End_Of_File;
+            tokenIndex++;
+            currentWord[0] = '\0';
+            break;
+        }
         if(d == '\n'){ // if character is newline
             if(currentWordIndex > 0){
                 tokens[tokenIndex].word = strdup(currentWord);
