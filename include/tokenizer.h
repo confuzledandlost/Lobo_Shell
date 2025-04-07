@@ -128,7 +128,7 @@ struct Command* TokensToPipeline(struct Token* tokens, int tokenCount) {
 struct Token* TokenizeTokens(int* tokenCount) {
     char d; // character read
     enum state s = executable; // current state
-    char* currentWord = (char*)malloc(sizeof(char) * 32); // current word
+    char* currentWord = (char*)malloc(sizeof(char) * 100); // current word
     struct Token* tokens = (struct Token*)malloc(sizeof(struct Token) * 32); // array of tokens
     int tokenIndex = 0; // index of current token
     int currentWordIndex = 0;
