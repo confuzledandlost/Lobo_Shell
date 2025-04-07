@@ -178,6 +178,7 @@ struct Token* TokenizeTokens(int* tokenCount) {
         else if(d == ' ' && s == string){
             currentWord[currentWordIndex++] = d; // add character to current word
             currentWord[currentWordIndex] = '\0'; // null terminate current word
+            continue; // Skip processing the space
         }
 
         if(s == string && d == '\"'){ // if current state is string and character is double quote

@@ -11,6 +11,8 @@
 #include "include/tokenizer.h"
 #include "include/command.h"
 
+// for file in tests/*.sh; do echo "🔸 Running: $file"; sh "$file" echo "-----------------------------"; done
+
 // Function to execute a pipeline of commands
 void execute_pipeline(struct Command* head) {
     if (head == NULL) {
@@ -63,7 +65,7 @@ void execute_pipeline(struct Command* head) {
                 } else {
                     flags |= O_TRUNC;
                 }
-                int fd = open(current->output_file, flags, 0644);
+                int fd = open(current->output_file, flags, 0666);
                 if (fd < 0) {
                     perror("open output file");
                     exit(EXIT_FAILURE);
