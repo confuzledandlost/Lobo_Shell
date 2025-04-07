@@ -116,9 +116,6 @@ int main() {
     int tokenCount;
     
     while (1) {
-        // Display prompt
-        printf("> ");
-
         // Get tokens from input
         struct Token* tokens = TokenizeTokens(&tokenCount);
         if (tokens == NULL) {
