@@ -174,11 +174,15 @@ struct Token* TokenizeTokens(int* tokenCount) {
 
         if(s == string && d == '\"'){ // if current state is string and character is double quote
             s = argument; // change state to argument
+            continue; // Skip adding the quote to the word
         }
 
         if(s == string){ // if current state is string
             if(d == '\\'){
                 d = getchar(); // get next character
+                currentWord[currentWordIndex++] = d; // add character to current word
+                currentWord[currentWordIndex] = '\0'; // null terminate current word
+            } else {
                 currentWord[currentWordIndex++] = d; // add character to current word
                 currentWord[currentWordIndex] = '\0'; // null terminate current word
             }
@@ -187,6 +191,7 @@ struct Token* TokenizeTokens(int* tokenCount) {
         
         else if(d == '\"'){
             s = string; // change state to string
+            continue; // Skip adding the quote to the word
         }
 
         if(s == executable){ // if current state is whitespace
