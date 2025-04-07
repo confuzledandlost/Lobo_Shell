@@ -121,6 +121,7 @@ int main() {
         // Get tokens from input
         struct Token* tokens = TokenizeTokens(&tokenCount);
         if (tokens->s == End_Of_File) {
+            FreeTokens(tokens, tokenCount);
             break; // Exit on EOF
         }
 
